@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - FRONTEND_URL=http://54.198.228.118
+    volumes:
+      - ./backend/employees.xlsx:/app/employees.xlsx
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=http://54.198.228.118:3000/api/employees
+      - VITE_EMPLOYEE_APP_PASSWORD=your-secure-password
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge 

@@ -3,7 +3,7 @@ import axios from 'axios';
 import './App.css';
 import PasswordPrompt from './PasswordPrompt';
 
-const API_URL = 'https://node.coreventum.com/api/employees';
+const API_URL = import.meta.env.VITE_API_URL || 'http://54.198.228.118:3000/api/employees';
 const APP_PASSWORD = import.meta.env.VITE_EMPLOYEE_APP_PASSWORD;
 
 function App() {
@@ -12,21 +12,40 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [formErrors, setFormErrors] = useState({});
 
   // Password prompt state
   const [pwOpen, setPwOpen] = useState(false);
-  const [pwAction, setPwAction] = useState(null); // { type, payload }
+  const [pwAction, setPwAction] = useState(null);
   const [pwLoading, setPwLoading] = useState(false);
   const pwCallback = useRef(null);
 
+  // Form validation
+  const validateForm = () => {
+    const errors = {};
+    if (!form.name.trim()) errors.name = 'Name is required';
+    if (!form.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = 'Please enter a valid email';
+    }
+    if (!form.department.trim()) errors.department = 'Department is required';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const fetchEmployees = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await axios.get(API_URL);
       setEmployees(res.data);
-      setError('');
     } catch (err) {
-      setError('Failed to fetch employees');
+      const message = err.response?.data?.error || err.message || 'Failed to fetch employees';
+      setError(message);
+      console.error('Fetch error:', err);
     }
     setLoading(false);
   };
@@ -36,7 +55,13 @@ function App() {
   }, []);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    
+    // Clear error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors({ ...formErrors, [name]: '' });
+    }
   };
 
   // Password-protected handlers
@@ -64,23 +89,30 @@ function App() {
   // Add or update
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (!form.name || !form.email || !form.department) {
-      setError('All fields are required');
+    
+    if (!validateForm()) {
       return;
     }
+
     setLoading(true);
+    setError('');
+    setSuccess('');
+    
     try {
       if (editingId) {
         await axios.put(`${API_URL}/${editingId}`, form);
+        setSuccess('Employee updated successfully!');
         setEditingId(null);
       } else {
         await axios.post(API_URL, form);
+        setSuccess('Employee added successfully!');
       }
       setForm({ name: '', email: '', department: '' });
-      setError('');
       fetchEmployees();
     } catch (err) {
-      setError('Failed to save employee');
+      const message = err.response?.data?.error || err.message || 'Failed to save employee';
+      setError(message);
+      console.error('Submit error:', err);
     }
     setLoading(false);
   };
@@ -89,18 +121,26 @@ function App() {
   const handleEdit = (emp) => {
     setForm({ name: emp.name, email: emp.email, department: emp.department });
     setEditingId(emp.id);
+    setSuccess('');
+    setError('');
   };
 
   // Delete
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this employee?')) return;
+    if (!window.confirm('Are you sure you want to delete this employee?')) return;
+    
     setLoading(true);
+    setError('');
+    setSuccess('');
+    
     try {
       await axios.delete(`${API_URL}/${id}`);
+      setSuccess('Employee deleted successfully!');
       fetchEmployees();
-      setError('');
     } catch (err) {
-      setError('Failed to delete employee');
+      const message = err.response?.data?.error || err.message || 'Failed to delete employee';
+      setError(message);
+      console.error('Delete error:', err);
     }
     setLoading(false);
   };
@@ -108,96 +148,124 @@ function App() {
   // Wrappers for password prompt
   const onAddOrUpdate = (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.department) {
-      setError('Please enter values in all fields');
+    if (!validateForm()) {
       return;
     }
     setError('');
+    setSuccess('');
     requestPassword('addOrUpdate', null, () => handleSubmit());
   };
+
   const onEdit = (emp) => {
     requestPassword('edit', emp, () => handleEdit(emp));
   };
+
   const onDelete = (id) => {
     requestPassword('delete', id, () => handleDelete(id));
+  };
+
+  const clearForm = () => {
+    setEditingId(null);
+    setForm({ name: '', email: '', department: '' });
+    setFormErrors({});
+    setError('');
+    setSuccess('');
   };
 
   return (
     <div className="container">
       <h1>Employee Management</h1>
+      
       <form className="employee-form" onSubmit={onAddOrUpdate}>
-        <input
-          type="text"
-          name="name"
-          placeholder="Name"
-          value={form.name}
-          onChange={handleChange}
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="department"
-          placeholder="Department"
-          value={form.department}
-          onChange={handleChange}
-        />
-        <button type="submit" disabled={loading}>
-          {editingId ? 'Update' : 'Add'} Employee
-        </button>
-        {editingId && (
-          <button
-            type="button"
-            onClick={() => {
-              setEditingId(null);
-              setForm({ name: '', email: '', department: '' });
-            }}
-          >
-            Cancel
+        <div className="form-group">
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={form.name}
+            onChange={handleChange}
+            className={formErrors.name ? 'error' : ''}
+          />
+          {formErrors.name && <span className="error-text">{formErrors.name}</span>}
+        </div>
+        
+        <div className="form-group">
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className={formErrors.email ? 'error' : ''}
+          />
+          {formErrors.email && <span className="error-text">{formErrors.email}</span>}
+        </div>
+        
+        <div className="form-group">
+          <input
+            type="text"
+            name="department"
+            placeholder="Department"
+            value={form.department}
+            onChange={handleChange}
+            className={formErrors.department ? 'error' : ''}
+          />
+          {formErrors.department && <span className="error-text">{formErrors.department}</span>}
+        </div>
+        
+        <div className="form-actions">
+          <button type="submit" disabled={loading} className="btn-primary">
+            {loading ? 'Saving...' : (editingId ? 'Update' : 'Add')} Employee
           </button>
-        )}
+          {editingId && (
+            <button type="button" onClick={clearForm} className="btn-secondary">
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
-      {error && <div className="error">{error}</div>}
-      {loading ? (
-        <div>Loading...</div>
+
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+
+      {loading && employees.length === 0 ? (
+        <div className="loading">Loading employees...</div>
       ) : (
-        <table className="employee-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Department</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.length === 0 ? (
+        <div className="table-container">
+          <table className="employee-table">
+            <thead>
               <tr>
-                <td colSpan="5">No employees found.</td>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              employees.map((emp) => (
-                <tr key={emp.id}>
-                  <td>{emp.id}</td>
-                  <td>{emp.name}</td>
-                  <td>{emp.email}</td>
-                  <td>{emp.department}</td>
-                  <td>
-                    <button onClick={() => onEdit(emp)}>Edit</button>
-                    <button onClick={() => onDelete(emp.id)} className="delete">Delete</button>
-                  </td>
+            </thead>
+            <tbody>
+              {employees.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="no-data">No employees found.</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                employees.map((emp) => (
+                  <tr key={emp.id}>
+                    <td>{emp.id}</td>
+                    <td>{emp.name}</td>
+                    <td>{emp.email}</td>
+                    <td>{emp.department}</td>
+                    <td>
+                      <button onClick={() => onEdit(emp)} className="btn-edit">Edit</button>
+                      <button onClick={() => onDelete(emp.id)} className="btn-delete">Delete</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
+      
       <PasswordPrompt
         open={pwOpen}
         onSubmit={handlePasswordSubmit}
