@@ -174,97 +174,124 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Employee Management</h1>
+      <div className="header">
+        <h1>Employee Management System</h1>
+        <p>Manage your team with ease and efficiency</p>
+      </div>
       
-      <form className="employee-form" onSubmit={onAddOrUpdate}>
-        <div className="form-group">
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            value={form.name}
-            onChange={handleChange}
-            className={formErrors.name ? 'error' : ''}
-          />
-          {formErrors.name && <span className="error-text">{formErrors.name}</span>}
-        </div>
-        
-        <div className="form-group">
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className={formErrors.email ? 'error' : ''}
-          />
-          {formErrors.email && <span className="error-text">{formErrors.email}</span>}
-        </div>
-        
-        <div className="form-group">
-          <input
-            type="text"
-            name="department"
-            placeholder="Department"
-            value={form.department}
-            onChange={handleChange}
-            className={formErrors.department ? 'error' : ''}
-          />
-          {formErrors.department && <span className="error-text">{formErrors.department}</span>}
-        </div>
-        
-        <div className="form-actions">
-          <button type="submit" disabled={loading} className="btn-primary">
-            {loading ? 'Saving...' : (editingId ? 'Update' : 'Add')} Employee
-          </button>
-          {editingId && (
-            <button type="button" onClick={clearForm} className="btn-secondary">
-              Cancel
+      <div className="employee-form">
+        <h2>Add/Edit Employee</h2>
+        <form onSubmit={onAddOrUpdate}>
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="name">Name</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="Enter employee name"
+                value={form.name}
+                onChange={handleChange}
+                className={formErrors.name ? 'error' : ''}
+              />
+              {formErrors.name && <span className="error-text">{formErrors.name}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="Enter email address"
+                value={form.email}
+                onChange={handleChange}
+                className={formErrors.email ? 'error' : ''}
+              />
+              {formErrors.email && <span className="error-text">{formErrors.email}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="department">Department</label>
+              <input
+                type="text"
+                id="department"
+                name="department"
+                placeholder="Enter department"
+                value={form.department}
+                onChange={handleChange}
+                className={formErrors.department ? 'error' : ''}
+              />
+              {formErrors.department && <span className="error-text">{formErrors.department}</span>}
+            </div>
+          </div>
+          
+          <div className="form-actions">
+            <button type="submit" disabled={loading} className="btn btn-primary">
+              {loading ? 'Saving...' : (editingId ? 'Update Employee' : 'Add Employee')}
             </button>
-          )}
+            {editingId && (
+              <button type="button" onClick={clearForm} className="btn btn-secondary">
+                Cancel Edit
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {error && <div className="error-message">⚠️ {error}</div>}
+      {success && <div className="success-message">✅ {success}</div>}
+
+      <div className="table-container">
+        <div className="table-header">
+          <h2>Employee List</h2>
         </div>
-      </form>
-
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">{success}</div>}
-
-      {loading && employees.length === 0 ? (
-        <div className="loading">Loading employees...</div>
-      ) : (
-        <div className="table-container">
-          <table className="employee-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Department</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.length === 0 ? (
+        {loading && employees.length === 0 ? (
+          <div className="loading">Loading employees...</div>
+        ) : (
+          <div className="table-container">
+            <table className="employee-table">
+              <thead>
                 <tr>
-                  <td colSpan="5" className="no-data">No employees found.</td>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Actions</th>
                 </tr>
-              ) : (
-                employees.map((emp) => (
-                  <tr key={emp.id}>
-                    <td>{emp.id}</td>
-                    <td>{emp.name}</td>
-                    <td>{emp.email}</td>
-                    <td>{emp.department}</td>
-                    <td>
-                      <button onClick={() => onEdit(emp)} className="btn-edit">Edit</button>
-                      <button onClick={() => onDelete(emp.id)} className="btn-delete">Delete</button>
-                    </td>
+              </thead>
+              <tbody>
+                {employees.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="no-data">No employees found</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ) : (
+                  employees.map((emp) => (
+                    <tr key={emp.id}>
+                      <td>#{emp.id}</td>
+                      <td><strong>{emp.name}</strong></td>
+                      <td>{emp.email}</td>
+                      <td>
+                        <span className="status-badge status-active">{emp.department}</span>
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <button onClick={() => onEdit(emp)} className="btn-edit">
+                            ✏️ Edit
+                          </button>
+                          <button onClick={() => onDelete(emp.id)} className="btn-delete">
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
       
       <PasswordPrompt
         open={pwOpen}
