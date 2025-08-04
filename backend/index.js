@@ -31,8 +31,18 @@ if (process.env.NODE_ENV !== 'production') {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Security middleware
-app.use(helmet());
+// Security middleware with Swagger UI compatibility
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+}));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -44,9 +54,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS configuration
+// CORS configuration - more permissive for API docs
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: true, // Allow all origins for API docs
   credentials: true
 }));
 
@@ -65,7 +75,18 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/employees', employeeRoutes);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// Swagger UI setup - simplified and more reliable
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  explorer: true,
+  swaggerOptions: {
+    docExpansion: 'list',
+    filter: true,
+    showRequestHeaders: true
+  },
+  customSiteTitle: 'Employee Management API',
+  customCss: '.swagger-ui .topbar { display: none }'
+}));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
