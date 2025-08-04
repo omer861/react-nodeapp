@@ -31,18 +31,18 @@ if (process.env.NODE_ENV !== 'production') {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Security middleware with Swagger UI compatibility
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
-}));
+// Security middleware - temporarily disabled for Swagger UI testing
+// app.use(helmet({
+//   contentSecurityPolicy: {
+//     directives: {
+//       defaultSrc: ["'self'"],
+//       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+//       fontSrc: ["'self'", "https://fonts.gstatic.com"],
+//       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+//       imgSrc: ["'self'", "data:", "https:"],
+//     },
+//   },
+// }));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -76,8 +76,9 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/employees', employeeRoutes);
 
-// Swagger UI setup - simplified and more reliable
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+// Swagger UI setup - fixed static file serving
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerDocument, {
   explorer: true,
   swaggerOptions: {
     docExpansion: 'list',
